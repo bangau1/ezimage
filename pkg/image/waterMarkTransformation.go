@@ -4,12 +4,22 @@ import (
 	"github.com/pkg/errors"
 	"image"
 	"image/draw"
+	"github.com/nfnt/resize"
 )
 
-type Point image.Point
+type Margin struct {
+	width float32
+	height float32
+}
+
 type Resize struct{
 	width float32
 	height float32
+}
+
+var noResize = Resize{
+	width:  1,
+	height: 1,
 }
 //WaterMarkProcessing is a class that can be used for applying watermark
 type WaterMarkProcessing struct {
@@ -19,12 +29,10 @@ type WaterMarkProcessing struct {
 	//RelativePosition where the watermark image being positioned
 	RelativePosition RelativePosition
 
-	//Point is a margin information used in accordance with the RelativePosition
-	Point Point
+	//Margin is a margin information used in accordance with the RelativePosition
+	Margin Margin
 
-	//ResizePercentage is resize percentage being applied to watermark image, relative to the source/base image.
-	//Example:
-	//-`Resize{0.4, 0.3}` will resize the watermark's width to 40% of the source image width and watermark's height to 30% of source image height.
+	//ResizePercentage is resize percentage being applied to watermark image
 	ResizePercentage Resize
 }
 
@@ -46,8 +54,15 @@ const (
 func NewWaterMarkProcessing(watermark *Image) WaterMarkProcessing {
 	return WaterMarkProcessing{
 		WaterMark: watermark,
-		RelativePosition:BottomRight,
-		Point:
+		RelativePosition: BottomRight,
+		Margin: Margin{
+			width:  0.5,
+			height: 0.5,
+		},
+		ResizePercentage: Resize{
+			width:  1,
+			height: 1,
+		},
 	}
 }
 
@@ -60,9 +75,54 @@ func (p WaterMarkProcessing) Apply(img *Image) Result {
 	targetBound := img.InternalImage.Bounds()
 	targetImg := image.NewRGBA(targetBound)
 
-
+	// draw base image
 	draw.Draw(targetImg, targetBound, img.InternalImage, image.Pt(0,0), draw.Src)
-	draw.Draw(targetImg, targetBound.Add(image.Pt(300, 200)), p.WaterMark.InternalImage, image.Pt(0, 0), draw.Over)
+
+	// resize the watermark image
+	var resizedWatermarkImg = Image{InternalImage:p.WaterMark.InternalImage}
+	if p.ResizePercentage != noResize{
+		rect := resizedWatermarkImg.InternalImage.Bounds()
+
+		targetW := uint(float32(rect.Size().X) * p.ResizePercentage.width)
+		targetH := uint(float32(rect.Size().Y) * p.ResizePercentage.height)
+
+		resizedWatermarkImg.InternalImage = resize.Resize(targetW, targetH,resizedWatermarkImg.InternalImage, resize.MitchellNetravali)
+	}
+
+	// draw the watermark with margin
+	watermarkBound := resizedWatermarkImg.InternalImage.Bounds()
+	var drawPoint image.Point
+	marginW := int(p.Margin.width * float32(targetBound.Size().X))
+	marginH := int(p.Margin.height * float32(targetBound.Size().Y))
+
+	switch p.RelativePosition {
+	case TopLeft:
+		drawPoint = image.Point{
+			X: marginW,
+			Y: marginH,
+		}
+		break
+	case TopRight:
+		drawPoint = image.Point{
+			X: targetBound.Size().X - (marginW + watermarkBound.Size().X),
+			Y: marginH,
+		}
+		break
+	case BottomLeft:
+		drawPoint = image.Point{
+			X: marginW,
+			Y: targetBound.Size().Y - (marginH + watermarkBound.Size().Y),
+		}
+		break
+	case BottomRight:
+		drawPoint = image.Point{
+			X: targetBound.Size().X - (marginW + watermarkBound.Size().X),
+			Y: targetBound.Size().Y - (marginH + watermarkBound.Size().Y),
+		}
+		break
+	}
+
+	draw.Draw(targetImg, targetBound.Add(drawPoint), resizedWatermarkImg.InternalImage, image.Pt(0, 0), draw.Over)
 
 
 	result := Result{
