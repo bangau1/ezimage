@@ -56,8 +56,8 @@ func NewWaterMarkProcessing(watermark *Image) WaterMarkProcessing {
 		WaterMark: watermark,
 		RelativePosition: BottomRight,
 		Margin: Margin{
-			width:  0.5,
-			height: 0.5,
+			width:  0.05,
+			height: 0.05,
 		},
 		ResizePercentage: Resize{
 			width:  1,
