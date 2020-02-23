@@ -66,7 +66,7 @@ to quickly create a Cobra application.`,
 		if strings.HasSuffix(strings.ToLower(watermarkFlags.Destination), ".png"){
 			mimeType = ezImage.MIME_TYPE_PNG
 		}
-		if err := result.Data.Save(watermarkFlags.Destination, mimeType, watermarkFlags.JpegQuality); err != nil{
+		if err := result.Data.SaveToLocation(watermarkFlags.Destination, mimeType, watermarkFlags.JpegQuality); err != nil{
 			fmt.Println(err)
 			os.Exit(1)
 		}else{
