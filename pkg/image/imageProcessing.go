@@ -61,7 +61,7 @@ func NewImageFromReader(reader io.Reader) (*Image, error) {
 	return result, pErr
 }
 
-func (img Image) Save(location, mimeType string, jpegQuality int) error {
+func (img Image) SaveToLocation(location, mimeType string, jpegQuality int) error {
 
 	imageFile, err := os.Create(location)
 	if err != nil {
@@ -69,10 +69,15 @@ func (img Image) Save(location, mimeType string, jpegQuality int) error {
 	}
 	defer imageFile.Close()
 
+	return img.Save(imageFile, mimeType, jpegQuality)
+}
+
+func (img Image) Save(w io.Writer, mimeType string, jpegQuality int) error {
+
 	if MIME_TYPE_JPEG == mimeType {
-		return jpeg.Encode(imageFile, img.InternalImage, &jpeg.Options{Quality:jpegQuality})
+		return jpeg.Encode(w, img.InternalImage, &jpeg.Options{Quality:jpegQuality})
 	} else if MIME_TYPE_PNG == mimeType {
-		return png.Encode(imageFile, img.InternalImage)
+		return png.Encode(w, img.InternalImage)
 	} else {
 		return errors.New(fmt.Sprintf("Unsupported mimeType: %s", mimeType))
 	}
