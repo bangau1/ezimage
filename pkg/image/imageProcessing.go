@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"io"
 	"os"
 )
 
@@ -39,12 +40,20 @@ func NewImageFromLocation(location string) (*Image, error) {
 	}
 
 	defer imageFile.Close()
+	return NewImageFromReader(imageFile)
+}
+
+//NewImageFromReader return an image from Reader
+func NewImageFromReader(reader io.Reader) (*Image, error) {
+	if reader == nil {
+		return nil, errors.New("Reader can't be nil")
+	}
 
 	var result *Image
 	var pErr error
-	img, format, err := image.Decode(imageFile)
+	img, format, err := image.Decode(reader)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("Can't decode the image: %s", location))
+		return nil, errors.Wrap(err, fmt.Sprintf("Can't decode the image"))
 	}
 	fmt.Printf("Format is %s\n", format)
 
